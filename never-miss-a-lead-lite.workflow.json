@@ -1,0 +1,225 @@
+{
+  "name": "Never Miss a Lead (LITE) — Missed-Call Text-Back",
+  "nodes": [
+    {
+      "id": "f1000000-0000-4000-8000-000000000099",
+      "name": "READ ME",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -180
+      ],
+      "parameters": {
+        "content": "## LITE version — free forever\nMissed call (or web form) hits the **Webhook** → the customer gets ONE instant text-back → the lead is logged to Google Sheets.\n\n**Setup:** 1) create your own Twilio + Google Sheets credentials in n8n and attach them (the `REPLACE_*` ids are placeholders — n8n never ships credentials in a JSON). 2) Swap `{{BUSINESS_NAME}}` in the SMS node and set your Twilio *from* number. 3) Point your form or Twilio missed-call callback at the webhook.\n\n**US senders:** register the number for A2P 10DLC in Twilio before real traffic, and only text people who just contacted you.",
+        "height": 320,
+        "width": 540
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-lead-lite",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000002",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1000000-0000-4000-8000-000000000001",
+              "name": "name",
+              "value": "={{ ($json.body?.name ?? $json.name) || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e1000000-0000-4000-8000-000000000002",
+              "name": "phone",
+              "value": "={{ String(($json.body?.phone ?? $json.phone ?? $json.body?.From ?? $json.From) || '').replace(/[^0-9+]/g, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "e1000000-0000-4000-8000-000000000003",
+              "name": "message",
+              "value": "={{ ($json.body?.message ?? $json.message) || (($json.body?.CallStatus ?? $json.CallStatus) ? 'Missed call - status: ' + ($json.body?.CallStatus ?? $json.CallStatus) : '') }}",
+              "type": "string"
+            },
+            {
+              "id": "e1000000-0000-4000-8000-000000000004",
+              "name": "source",
+              "value": "={{ ($json.body?.source ?? $json.source) || (($json.body?.CallStatus ?? $json.CallStatus) ? 'missed-call' : 'website') }}",
+              "type": "string"
+            },
+            {
+              "id": "e1000000-0000-4000-8000-000000000005",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000003",
+      "name": "SMS Text-Back",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "+14695550100",
+        "to": "={{ $json.phone }}",
+        "message": "Hey! It's {{BUSINESS_NAME}} - sorry we missed you. We've got your number and we're on it. What do you need help with today?",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000004",
+      "name": "Log Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "REPLACE_SPREADSHEET_ID",
+          "cachedResultName": "Never Miss a Lead — Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_SPREADSHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_SPREADSHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Normalize Lead').item.json.receivedAt }}",
+            "Name": "={{ $('Normalize Lead').item.json.name }}",
+            "Phone": "={{ $('Normalize Lead').item.json.phone }}",
+            "Message": "={{ $('Normalize Lead').item.json.message }}",
+            "Source": "={{ $('Normalize Lead').item.json.source }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "f1000000-0000-4000-8000-000000000005",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "SMS Text-Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Text-Back": {
+      "main": [
+        [
+          {
+            "node": "Log Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Lead": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
