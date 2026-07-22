@@ -44,8 +44,7 @@ This LITE core is genuinely useful and yours forever. The paid version is the fu
 | Agency license option — deploy for unlimited clients, keep 100% of your fees | — | ✅ |
 
 **Full version:** $47 single-business / $97 agency-resell →
-- Payhip (instant download): `[PAYHIP-PRODUCT-URL]`
-- Gumroad: `[GUMROAD-PRODUCT-URL]`
+- Payhip (instant download): https://payhip.com/b/14sMZ
 
 *(Agencies: missed-call text-back is a flagship feature of GoHighLevel's $297/mo Unlimited plan (gohighlevel.com/pricing, retrieved 2026-07-02). This is the self-hosted version of that offer — you sell the outcome and keep the margin.)*
 
