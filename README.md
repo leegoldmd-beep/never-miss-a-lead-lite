@@ -12,14 +12,20 @@ Webhook → Normalize Lead → SMS Text-Back (Twilio) → Log to Google Sheets �
 
 - Catches a **missed call** (via Twilio) or a **web form POST** on one webhook
 - Instantly texts the caller back from your business number (message is yours to edit — the default is under 160 chars and single-segment safe)
-- Logs every lead to a Google Sheet (`Timestamp | Name | Phone | Message | Source`)
+- Logs every lead to a Google Sheet (`Timestamp | Name | Phone | Message | Source | Booked?`)
 - Returns `{ success: true }` so form integrations don't hang
+
+### Track recovery, not just responses
+
+"Text sent" and "job booked" are different events — the gap between them is where revenue actually leaks. The workflow leaves the `Booked?` column blank on every new lead; **mark it YES when that lead turns into a real job.** The text-back catches the lead; the YES rate proves what that's worth. In your sheet: `=COUNTIF(F2:F,"YES")/COUNTA(A2:A)` gives you the recovery rate (COUNTIF is case-insensitive, so yes/Yes/YES all count). (Added after the r/n8n thread rightly pushed on this.)
+
+**Already running the v1.0 import?** Nothing breaks — add a `Booked?` header in the next empty column of your sheet (F if you kept the default five) and start marking YES. Re-import only if you want the updated JSON.
 
 ## Setup (~20 minutes)
 
 1. **Import** `never-miss-a-lead-lite.workflow.json` into n8n (Cloud or self-hosted): **... menu → Import from File**.
 2. **Credentials:** create your own Twilio + Google Sheets credentials in n8n and attach them. The `REPLACE_*` ids in the JSON are placeholders — n8n never exports real credentials, so there are no secrets in this file and yours must be created fresh.
-3. **Personalize:** in the `SMS Text-Back` node, replace `{{BUSINESS_NAME}}` and set `from` to your Twilio number (the `+1469555...` numbers in the JSON are fictional placeholders). In `Log Lead`, pick your spreadsheet — tab named `Leads`, header row `Timestamp | Name | Phone | Message | Source`.
+3. **Personalize:** in the `SMS Text-Back` node, replace `{{BUSINESS_NAME}}` and set `from` to your Twilio number (the `+1469555...` numbers in the JSON are fictional placeholders). In `Log Lead`, pick your spreadsheet — tab named `Leads`, header row `Timestamp | Name | Phone | Message | Source | Booked?` (the last column stays blank until you mark a job booked).
 4. **Missed-call wiring (Twilio):** a 4-widget Twilio Studio flow on your number — *Incoming Call → Connect Call To (your real phone) → Split Based On → HTTP Request*. Hook the Split to the Connect widget's **Connected Call Ended** transition (Studio has no "no answer" transition — the outcome lives in a variable), test `{{widgets.YOUR_CONNECT_WIDGET.DialCallStatus}}` with one condition **Matches Any Of** `no-answer, busy, failed`, and point that condition at an HTTP Request widget: POST, Form URL Encoded, to this workflow's production webhook URL. In the HTTP Request widget add **two HTTP parameters yourself** — `From` = `{{trigger.call.From}}` and `CallStatus` = `{{widgets.YOUR_CONNECT_WIDGET.DialCallStatus}}` — the widget only sends parameters you add; the caller's number is NOT included automatically. The workflow reads `From`/`CallStatus` and the missed call becomes a logged lead. Web forms can POST JSON `{ name, phone, message, source }` to the same webhook.
 5. **Test:** `curl -X POST <test-url> -H "Content-Type: application/json" -d '{"name":"Test","phone":"+15555550123","message":"hello","source":"website"}'` → node lights, text received, sheet row appended. Then **Activate**.
 

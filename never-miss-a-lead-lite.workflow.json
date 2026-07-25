@@ -11,7 +11,7 @@
         -180
       ],
       "parameters": {
-        "content": "## LITE version — free forever\nMissed call (or web form) hits the **Webhook** → the customer gets ONE instant text-back → the lead is logged to Google Sheets.\n\n**Setup:** 1) create your own Twilio + Google Sheets credentials in n8n and attach them (the `REPLACE_*` ids are placeholders — n8n never ships credentials in a JSON). 2) Swap `{{BUSINESS_NAME}}` in the SMS node and set your Twilio *from* number. 3) Point your form or Twilio missed-call callback at the webhook.\n\n**US senders:** register the number for A2P 10DLC in Twilio before real traffic, and only text people who just contacted you.",
+        "content": "## LITE version — free forever\nMissed call (or web form) hits the **Webhook** → the customer gets ONE instant text-back → the lead is logged to Google Sheets.\n\n**Setup:** 1) create your own Twilio + Google Sheets credentials in n8n and attach them (the `REPLACE_*` ids are placeholders — n8n never ships credentials in a JSON). 2) Swap `{{BUSINESS_NAME}}` in the SMS node and set your Twilio *from* number. 3) Point your form or Twilio missed-call callback at the webhook.\n\n**US senders:** register the number for A2P 10DLC in Twilio before real traffic, and only text people who just contacted you.\n\n**Track recovery, not just responses:** the sheet has a `Booked?` column the workflow leaves blank — mark it YES when the lead turns into a job. Texts sent ≠ jobs booked; the YES rate is the number that matters.",
         "height": 320,
         "width": 540
       }
@@ -138,7 +138,8 @@
             "Name": "={{ $('Normalize Lead').item.json.name }}",
             "Phone": "={{ $('Normalize Lead').item.json.phone }}",
             "Message": "={{ $('Normalize Lead').item.json.message }}",
-            "Source": "={{ $('Normalize Lead').item.json.source }}"
+            "Source": "={{ $('Normalize Lead').item.json.source }}",
+            "Booked?": ""
           },
           "matchingColumns": [],
           "schema": [],
